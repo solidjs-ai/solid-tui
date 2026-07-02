@@ -1,0 +1,12 @@
+{
+  "extends": "../../tsconfig.json",
+  "compilerOptions": {
+    "types": ["node"],
+    "baseUrl": ".",
+    "paths": {
+      "@solid-tui/runtime": ["../runtime/src/index.ts"],
+      "@solid-tui/runtime/internal": ["../runtime/src/internal.ts"]
+    }
+  },
+  "include": ["src/**/*.ts"]
+}

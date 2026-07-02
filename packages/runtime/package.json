@@ -1,0 +1,74 @@
+{
+  "name": "@solid-tui/runtime",
+  "version": "0.1.0",
+  "description": "Solid terminal renderer with better-yoga-layout flexbox layout.",
+  "keywords": [
+    "ansi",
+    "cli",
+    "console",
+    "flexbox",
+    "ink",
+    "renderer",
+    "solid",
+    "terminal",
+    "tui",
+    "yoga"
+  ],
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/solidjs-ai/solid-tui.git",
+    "directory": "packages/runtime"
+  },
+  "files": [
+    "dist",
+    "LICENSE",
+    "README.md"
+  ],
+  "type": "module",
+  "exports": {
+    ".": "./dist/index.mjs",
+    "./internal": "./dist/internal.mjs",
+    "./package.json": "./package.json"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "build": "vp pack",
+    "dev": "vp pack --watch",
+    "test": "vp test --passWithNoTests",
+    "check:type": "tsc --noEmit",
+    "prepublishOnly": "vp run build"
+  },
+  "dependencies": {
+    "@alcalzone/ansi-tokenize": "catalog:",
+    "ansi-escapes": "catalog:",
+    "better-yoga-layout": "^0.2.2",
+    "chalk": "catalog:",
+    "cli-boxes": "^3.0.0",
+    "cli-truncate": "^6.0.0",
+    "code-excerpt": "^4.0.0",
+    "is-in-ci": "catalog:",
+    "patch-console": "catalog:",
+    "signal-exit": "^4.1.0",
+    "slice-ansi": "^9.0.0",
+    "solid-js": "catalog:",
+    "stack-utils": "^2.0.6",
+    "string-width": "catalog:",
+    "terminal-size": "catalog:",
+    "wrap-ansi": "^10.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "catalog:",
+    "@types/stack-utils": "^2.0.3",
+    "typescript": "catalog:",
+    "vite-plus": "catalog:"
+  },
+  "peerDependencies": {
+    "solid-js": "^1.9.0"
+  },
+  "engines": {
+    "node": ">=22.18.0"
+  }
+}

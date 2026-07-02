@@ -1,0 +1,29 @@
+{
+  "name": "solid-tui-monorepo",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Solid terminal UI framework with Yoga flexbox layout.",
+  "homepage": "https://github.com/solidjs-ai/solid-tui#readme",
+  "bugs": {
+    "url": "https://github.com/solidjs-ai/solid-tui/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/solidjs-ai/solid-tui.git"
+  },
+  "type": "module",
+  "scripts": {
+    "check:type": "vp run -r check:type",
+    "test": "vp run -r test",
+    "build": "vp run -r build",
+    "ready": "vp run build && vp run check:type && vp run test",
+    "prepare": "vp config"
+  },
+  "devDependencies": {
+    "vite-plus": "catalog:"
+  },
+  "engines": {
+    "node": ">=22.18.0"
+  },
+  "packageManager": "pnpm@11.1.2"
+}

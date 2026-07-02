@@ -1,0 +1,43 @@
+{
+  "name": "@solid-tui/testing",
+  "version": "0.1.0",
+  "description": "Test utilities for Solid terminal components.",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/solidjs-ai/solid-tui.git",
+    "directory": "packages/testing"
+  },
+  "files": [
+    "dist",
+    "LICENSE",
+    "README.md"
+  ],
+  "type": "module",
+  "exports": {
+    ".": "./dist/index.mjs",
+    "./package.json": "./package.json"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "build": "vp pack",
+    "dev": "vp pack --watch",
+    "test": "vp test --passWithNoTests",
+    "check:type": "tsc --noEmit",
+    "prepublishOnly": "vp run build"
+  },
+  "dependencies": {
+    "@solid-tui/runtime": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "catalog:",
+    "solid-js": "catalog:",
+    "typescript": "catalog:",
+    "vite-plus": "catalog:"
+  },
+  "peerDependencies": {
+    "solid-js": "^1.9.0"
+  }
+}
