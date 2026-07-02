@@ -1,5 +1,5 @@
 import { createMemo, mergeProps, type JSX } from "solid-js";
-import { Text, useAnimation } from "@solid-tui/runtime";
+import { createComponent, Text, useAnimation } from "@solid-tui/runtime";
 import type { SpinnerProps } from "./spinner-props.ts";
 import { resolveSpinner } from "./spinners.ts";
 
@@ -12,10 +12,25 @@ export function Spinner(props: SpinnerProps): JSX.Element {
     return frames[frame() % frames.length] ?? "";
   });
 
-  return (
-    <Text>
-      <Text color={merged.color}>{glyph()}</Text>
-      {merged.label ? <Text>{" " + merged.label}</Text> : null}
-    </Text>
-  );
+  return createComponent(Text, {
+    get children() {
+      return [
+        createComponent(Text, {
+          get color() {
+            return merged.color;
+          },
+          get children() {
+            return glyph();
+          },
+        }),
+        merged.label
+          ? createComponent(Text, {
+              get children() {
+                return ` ${merged.label}`;
+              },
+            })
+          : null,
+      ];
+    },
+  }) as JSX.Element;
 }

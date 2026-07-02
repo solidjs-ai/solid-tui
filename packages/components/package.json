@@ -1,6 +1,6 @@
 {
   "name": "@solid-tui/components",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "High-level Solid components for solid-tui, composed from @solid-tui/runtime primitives.",
   "license": "MIT",
   "repository": {
