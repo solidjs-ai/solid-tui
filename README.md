@@ -9,6 +9,12 @@ Solid terminal UI framework inspired by `vue-tui`, using `better-yoga-layout` fo
 - `@solid-tui/vite` - Vite plugin that compiles Solid TSX in `universal` renderer mode
 - `@solid-tui/testing` - component test harness with fake terminal streams
 
+## Release Policy
+
+All public `@solid-tui/*` packages use linked versions. A patch, minor, or major
+release keeps `runtime`, `components`, `vite`, and `testing` on the same version
+number even when only one package changed.
+
 ## Examples
 
 - `examples/basic` - minimal Solid TSX app

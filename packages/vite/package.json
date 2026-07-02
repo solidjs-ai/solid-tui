@@ -1,6 +1,6 @@
 {
   "name": "@solid-tui/vite",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Vite plugin for solid-tui: universal Solid TSX, in-process terminal dev server, and Node builds.",
   "license": "MIT",
   "repository": {
