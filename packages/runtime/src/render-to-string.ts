@@ -201,5 +201,7 @@ function createNoOpStdinContext(): StdinContext {
     acquireRawMode: () => {},
     releaseRawMode: () => {},
     setBracketedPasteMode: () => {},
+    acquireSgrMouseMode: () => Symbol("sgr-mouse"),
+    releaseSgrMouseMode: () => {},
   };
 }

@@ -1,5 +1,5 @@
-import { createMemo, mergeProps, type JSX } from "solid-js";
-import { createComponent, Text, useAnimation } from "@solid-tui/runtime";
+import type { JSX } from "solid-js";
+import { createComponent, createMemo, mergeProps, Text, useAnimation } from "@solid-tui/runtime";
 import type { SpinnerProps } from "./spinner-props.ts";
 import { resolveSpinner } from "./spinners.ts";
 

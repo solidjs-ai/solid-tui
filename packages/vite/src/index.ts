@@ -2,7 +2,6 @@ import solid from "vite-plugin-solid";
 import type { Plugin } from "vite";
 import { devVmodPlugin } from "./dev-vmod.ts";
 import { devPlugin } from "./dev.ts";
-import { buildConfigPlugin } from "./build.ts";
 import { solidRuntimeConfigPlugin } from "./solid-runtime-config.ts";
 
 export interface SolidTuiOptions {
@@ -11,9 +10,10 @@ export interface SolidTuiOptions {
 }
 
 export function solidTui(options: SolidTuiOptions = {}): Plugin[] {
-  // solidTui() owns the Solid TSX compiler configuration because Solid's universal renderer needs
-  // a custom moduleName. Consumers can still pass vite-plugin-solid options through `solid`.
-  const { dev, build } = normalizeEntry(options.entry);
+  // solidTui() is dev-only. It owns the dev compiler because Solid always authors in JSX and the
+  // universal renderer's moduleName must not be left to consumer convention. Production builds use
+  // tsdown + unplugin-solid/rolldown with the same universal compiler options.
+  const entry = normalizeDevEntry(options.entry);
   const solidOptions = {
     ...options.solid,
     solid: {
@@ -22,21 +22,17 @@ export function solidTui(options: SolidTuiOptions = {}): Plugin[] {
       moduleName: "@solid-tui/runtime",
     },
   } as Parameters<typeof solid>[0];
+  const solidCompiler = solid(solidOptions) as Plugin;
+  solidCompiler.apply = "serve";
 
-  return [
-    solidRuntimeConfigPlugin(),
-    devPlugin({ entry: dev }),
-    buildConfigPlugin({ entry: build }),
-    devVmodPlugin(),
-    solid(solidOptions) as Plugin,
-  ];
+  return [solidRuntimeConfigPlugin(), devPlugin({ entry }), devVmodPlugin(), solidCompiler];
 }
 
-function normalizeEntry(entry?: string): { dev: string; build: string } {
+function normalizeDevEntry(entry?: string): string {
   const e = (entry ?? "src/main.tsx").replace(/\\/g, "/");
-  if (e.startsWith("/") || /^[a-zA-Z]:\//.test(e)) return { dev: e, build: e };
+  if (e.startsWith("/") || /^[a-zA-Z]:\//.test(e)) return e;
   const bare = e.replace(/^(?:\.\/)+/, "");
-  return { dev: `/${bare}`, build: bare };
+  return `/${bare}`;
 }
 
 export default solidTui;

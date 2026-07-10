@@ -1,6 +1,6 @@
 {
   "name": "@solid-tui/runtime",
-  "version": "0.1.1",
+  "version": "0.2.0",
   "description": "Solid terminal renderer with better-yoga-layout flexbox layout.",
   "keywords": [
     "ansi",

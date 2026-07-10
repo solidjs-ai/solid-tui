@@ -1,4 +1,6 @@
 import type { JSX } from "../solid-client.ts";
+import type { MouseHandlerProps } from "../mouse/events.ts";
+import type { Ref } from "solid-js";
 
 type WrapMode =
   | "wrap"
@@ -8,9 +10,9 @@ type WrapMode =
   | "truncate-middle"
   | "truncate-start";
 
-export interface TextProps {
+export interface TextProps extends MouseHandlerProps {
   children?: JSX.Element;
-  ref?: (node: unknown) => void;
+  ref?: Ref<unknown>;
   color?: string;
   backgroundColor?: string;
   dimColor?: boolean;

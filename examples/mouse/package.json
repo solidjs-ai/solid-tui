@@ -1,0 +1,24 @@
+{
+  "name": "@solid-tui/example-mouse",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsdown",
+    "preview": "tsdown && node dist/main.mjs",
+    "check:type": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@solid-tui/runtime": "workspace:*",
+    "solid-js": "catalog:"
+  },
+  "devDependencies": {
+    "@solid-tui/vite": "workspace:*",
+    "@types/node": "catalog:",
+    "tsdown": "catalog:",
+    "typescript": "catalog:",
+    "unplugin-solid": "catalog:",
+    "vite": "catalog:"
+  }
+}

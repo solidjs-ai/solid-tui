@@ -1,0 +1,13 @@
+{
+  "extends": "../../tsconfig.json",
+  "compilerOptions": {
+    "types": ["node"],
+    "baseUrl": ".",
+    "paths": {
+      "@solid-tui/runtime": ["../../packages/runtime/src/index.ts"],
+      "@solid-tui/runtime/internal": ["../../packages/runtime/src/internal.ts"],
+      "@solid-tui/vite": ["../../packages/vite/src/index.ts"]
+    }
+  },
+  "include": ["src/**/*.ts", "src/**/*.tsx", "vite.config.ts", "tsdown.config.ts"]
+}

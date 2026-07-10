@@ -1,17 +1,11 @@
 import type { HotPayload, ViteDevServer } from "vite";
 
-// plugin-vue broadcasts its rerender-vs-reload custom event ("file-changed") through
-// server.ws, but this dev server runs the app in the SSR runnable environment with the
-// browser socket off — so the module runner never sees it and every edit falls through
-// to a state-RESETTING reload. Forward ws custom payloads onto the ssr environment's hot
-// channel so template-only edits do a state-PRESERVING rerender (web parity).
-//
-// Build/compile errors take the same dead-end path: Vite sends a typed { type: "error" }
-// payload through the (browser-socket-off) client channel — which is the same object as
-// server.ws here — so without forwarding it the runtime's dev overlay never learns of the
-// error. The module runner's HMR handler dispatches `vite:error` straight from a
-// { type: "error" } payload (passing the whole payload, whose `.err` the runtime reads),
-// so forward it AS-IS rather than re-wrapping it as a custom event.
+// Solid Refresh installs standard import.meta.hot acceptance boundaries, which Vite's SSR
+// module runner handles on its in-process hot channel. The browser socket is disabled for a
+// terminal app, though, and Vite or companion plugins can still publish custom events and
+// compile errors through server.ws. Mirror those payloads into the runnable environment so
+// the runtime overlay and custom dev integrations observe the same events. Error payloads
+// stay intact because the runner dispatches their `.err` through `vite:error`.
 export function bridgeHmrEventsToRunner(server: ViteDevServer): void {
   const ssr = server.environments.ssr;
   if (!ssr) return;

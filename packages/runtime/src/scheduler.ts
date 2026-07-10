@@ -1,6 +1,7 @@
 export interface CommitScheduler {
   schedule: () => void;
   flush: () => Promise<void>;
+  now: () => number;
   /** Returns true when a trailing-edge commit is pending. */
   hasPending: () => boolean;
   /** Cancel any pending trailing-edge timer. */
@@ -17,6 +18,7 @@ export interface CommitSchedulerOptions {
    * every tick); pass 0 there.
    */
   throttleMs: number;
+  now?: () => number;
 }
 
 export function createCommitScheduler(
@@ -25,6 +27,7 @@ export function createCommitScheduler(
 ): CommitScheduler {
   const immediate = options.immediate ?? false;
   const throttleMs = options.throttleMs;
+  const now = options.now ?? Date.now;
   let scheduled = false;
   // Multiple concurrent flush() callers can be waiting on the same pending
   // commit; settle all of them rather than overwriting a single resolver.
@@ -95,16 +98,16 @@ export function createCommitScheduler(
         doCommit();
         return;
       }
-      const now = Date.now();
-      if (pendingAt === null) pendingAt = now;
-      if (now - pendingAt >= throttleMs) {
+      const currentTime = now();
+      if (pendingAt === null) pendingAt = currentTime;
+      if (currentTime - pendingAt >= throttleMs) {
         // maxWait edge: deferred calls have been pushing the trailing edge
         // for a full window — commit now, then re-arm an (empty) window so
         // the next call defers instead of double-committing as leading.
         // pendingAt is stamped AFTER the commit (es-toolkit does the same),
         // so paint time doesn't eat into the next window.
         doCommit();
-        pendingAt = Date.now();
+        pendingAt = now();
         armTrailingWindow();
         return;
       }
@@ -148,5 +151,5 @@ export function createCommitScheduler(
     drainFlushResolvers();
   }
 
-  return { schedule, flush, hasPending, cancel };
+  return { schedule, flush, now, hasPending, cancel };
 }

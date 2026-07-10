@@ -6,6 +6,7 @@ const solidStoreEntry = "solid-js/store/dist/store.js";
 export function solidRuntimeConfigPlugin(): Plugin {
   return {
     name: "solid-tui:solid-runtime-config",
+    apply: "serve",
     config() {
       return {
         resolve: {

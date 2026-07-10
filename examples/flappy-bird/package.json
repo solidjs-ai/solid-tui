@@ -5,8 +5,8 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "vite build",
-    "preview": "vite build && node dist/main.js",
+    "build": "tsdown",
+    "preview": "tsdown && node dist/game.mjs",
     "test": "vp test --passWithNoTests",
     "check:type": "tsc --noEmit"
   },
@@ -19,7 +19,9 @@
     "@solid-tui/testing": "workspace:*",
     "@solid-tui/vite": "workspace:*",
     "@types/node": "catalog:",
+    "tsdown": "catalog:",
     "typescript": "catalog:",
+    "unplugin-solid": "catalog:",
     "vite": "catalog:",
     "vite-plus": "catalog:"
   }

@@ -1,26 +1,12 @@
 # basic
 
-Minimal solid-tui app written as Solid TSX.
+Minimal solid-tui application written as Solid TSX.
 
-## Setup
-
-```ts
-// vite.config.ts
-import { defineConfig } from "vite";
-import { solidTui } from "@solid-tui/vite";
-
-export default defineConfig({
-  plugins: [solidTui()],
-});
+```sh
+pnpm dev      # Vite terminal dev server with HMR
+pnpm build    # self-contained dist/main.mjs via tsdown
+pnpm preview
 ```
 
-```jsonc
-// package.json
-{
-  "scripts": {
-    "dev": "vite",
-    "build": "vite build",
-    "preview": "vite build && node dist/main.js",
-  },
-}
-```
+Development uses `solidTui()` in `vite.config.ts`. Production uses
+`unplugin-solid/rolldown` in `tsdown.config.ts`; both compile JSX with Solid's universal renderer.

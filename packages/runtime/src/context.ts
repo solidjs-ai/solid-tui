@@ -1,6 +1,7 @@
 import type { EventEmitter } from "node:events";
 import { createContext, type Accessor } from "./solid-client.ts";
 import type { AnimationScheduler } from "./animation-scheduler.ts";
+import type { MouseController } from "./mouse/controller.ts";
 
 export interface CursorPosition {
   x: number;
@@ -22,6 +23,7 @@ export interface AppContext {
   writeToStderr: (data: string) => void;
   cursorPosition: CursorPosition | undefined;
   setCursorPosition: (pos: CursorPosition | undefined) => void;
+  internal_mouse?: MouseController;
 }
 
 export interface FocusContext {
@@ -50,7 +52,11 @@ export interface StdinContext {
   acquireRawMode: () => void;
   releaseRawMode: () => void;
   setBracketedPasteMode: (enabled: boolean) => void;
+  acquireSgrMouseMode: (level?: SgrMouseMode) => symbol;
+  releaseSgrMouseMode: (token: symbol) => void;
 }
+
+export type SgrMouseMode = "button" | "drag" | "hover";
 
 export const AppContextKey = createContext<AppContext>();
 export const FocusContextKey = createContext<FocusContext>();

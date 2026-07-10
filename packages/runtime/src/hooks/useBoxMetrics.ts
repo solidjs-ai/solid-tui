@@ -1,6 +1,6 @@
 import { createEffect, createSignal, onCleanup, type Accessor } from "../solid-client.ts";
-import type { Node as YogaNode } from "better-yoga-layout";
-import { addLayoutListener, type TuiNode, type TuiRoot } from "../host/nodes.ts";
+import { addLayoutListener } from "../host/nodes.ts";
+import { findRootNode, resolveTuiNode, resolveYogaNode } from "../host/resolve-node.ts";
 
 export interface BoxMetrics {
   readonly width: number;
@@ -15,28 +15,6 @@ export interface UseBoxMetricsReturn {
   readonly left: Accessor<number>;
   readonly top: Accessor<number>;
   readonly hasMeasured: Accessor<boolean>;
-}
-
-function resolveYogaNode(value: unknown): { yoga: YogaNode } | null {
-  if (!value || typeof value !== "object") return null;
-  const obj = value as Record<string, unknown>;
-  if (obj.yoga) return obj as { yoga: YogaNode };
-  return null;
-}
-
-function resolveTuiNode(value: unknown): TuiNode | null {
-  if (!value || typeof value !== "object") return null;
-  const obj = value as Record<string, unknown>;
-  return typeof obj.type === "string" ? (obj as unknown as TuiNode) : null;
-}
-
-function findRootNode(node: TuiNode | null): TuiRoot | null {
-  let current: TuiNode | null = node;
-  while (current) {
-    if (current.type === "root") return current;
-    current = current.parent;
-  }
-  return null;
 }
 
 export function measureElement(node: unknown): { width: number; height: number } {

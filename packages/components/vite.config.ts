@@ -6,6 +6,12 @@ const require = createRequire(import.meta.url);
 const solidClientEntry = require.resolve("solid-js/dist/solid.js");
 
 export default defineConfig({
+  resolve: {
+    alias: [{ find: /^solid-js$/, replacement: solidClientEntry }],
+  },
+  ssr: {
+    noExternal: ["solid-js", "@solid-tui/runtime"],
+  },
   plugins: [
     solid({
       solid: {

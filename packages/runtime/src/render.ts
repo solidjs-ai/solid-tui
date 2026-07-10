@@ -1,5 +1,6 @@
 import Yoga from "better-yoga-layout";
 import { EventEmitter } from "node:events";
+import { writeSync as fsWriteSync } from "node:fs";
 import isInCi from "is-in-ci";
 import { onExit } from "signal-exit";
 import patchConsoleFn from "patch-console";
@@ -14,6 +15,7 @@ import {
 } from "./solid-client.ts";
 import { renderSolidRoot, setRendererCommit } from "./renderer.ts";
 import { createInputParser, type InputEvent } from "./io/input-parser.ts";
+import { isSgrMouseInput, parseMouseInput, parseSgrMouseInput } from "./io/parse-mouse.ts";
 import { parseKeypress } from "./io/parse-keypress.ts";
 import { createKittyKeyboardController, type KittyKeyboardOptions } from "./io/kitty-keyboard.ts";
 import { createRoot, emitLayoutListeners, type TuiRoot } from "./host/nodes.ts";
@@ -27,6 +29,7 @@ import { findStatics, paintStaticNode } from "./paint/static-channel.ts";
 import { createFrameWriter } from "./io/frame-writer.ts";
 import { INTERNAL_FRAME_SINK, type FrameSink } from "./io/frame-sink.ts";
 import { bsu, esu, shouldSynchronize } from "./io/write-synchronized.ts";
+import { createMouseController, type MouseHitMapEntry } from "./mouse/controller.ts";
 import {
   AnimationSchedulerKey,
   AppContextKey,
@@ -35,6 +38,7 @@ import {
   type AppContext,
   type CursorPosition,
   type FocusContext,
+  type SgrMouseMode,
   type StdinContext,
 } from "./context.ts";
 import { ErrorOverview, isErrorInput, messageForNonError } from "./components/error-overview.ts";
@@ -63,6 +67,9 @@ export interface MountOptions {
   maxFps?: number;
   isScreenReaderEnabled?: boolean;
   incrementalRendering?: boolean;
+  /** Render from terminal origin in the alternate buffer and enable targeted mouse input. */
+  fullscreen?: boolean;
+  /** @deprecated Use `fullscreen` instead. */
   alternateScreen?: boolean;
   kittyKeyboard?: KittyKeyboardOptions;
 }
@@ -85,6 +92,10 @@ type MaybeWritableStream = NodeJS.WriteStream & {
 };
 
 const liveInstances = new WeakMap<NodeJS.WriteStream, TuiApp>();
+
+function supportsTerminalMouse(): boolean {
+  return process.env["TERM"] !== "dumb";
+}
 
 function getWritableStreamState(stdout: MaybeWritableStream): {
   canWriteToStdout: boolean;
@@ -126,6 +137,7 @@ export function createApp(root: Component<RootProps>, rootProps?: RootProps | nu
   let mountedStdout: NodeJS.WriteStream | null = null;
   let mountedGetLastOutput: (() => string) | null = null;
   let mountedAsOwner = false;
+  let mountedFullscreen = false;
   let teardownStarted = false;
   let exitInitiated = false;
   let pendingExitError: unknown;
@@ -146,7 +158,22 @@ export function createApp(root: Component<RootProps>, rootProps?: RootProps | nu
     else setImmediate(finish);
   }
 
-  function teardown() {
+  function writeTerminalRestore(data: string, sync: boolean): void {
+    const stdout = mountedAppContext?.stdout as MaybeWritableStream | undefined;
+    if (!stdout?.isTTY || !getWritableStreamState(stdout).canWriteToStdout) return;
+    try {
+      if (sync) {
+        const streamFd = (stdout as { fd?: number }).fd;
+        fsWriteSync(typeof streamFd === "number" ? streamFd : 1, data);
+      } else {
+        stdout.write(data);
+      }
+    } catch {
+      // Terminal restoration is best-effort during process shutdown.
+    }
+  }
+
+  function teardown(sync = false) {
     if (teardownStarted) return;
     teardownStarted = true;
 
@@ -167,7 +194,7 @@ export function createApp(root: Component<RootProps>, rootProps?: RootProps | nu
     mountedAnimationScheduler = null;
     mountedKittyController?.dispose();
     mountedKittyController = null;
-    mountedStdinController?.dispose();
+    mountedStdinController?.dispose(sync);
     mountedStdinController = null;
 
     if (mountedRoot) {
@@ -193,11 +220,11 @@ export function createApp(root: Component<RootProps>, rootProps?: RootProps | nu
       mountedDevTeardown = null;
     }
 
-    if (mountedAppContext?.interactive && mountedAppContext.stdout.isTTY) {
-      mountedAppContext.stdout.write("\x1b[?25h");
-      if (mountedAppContext.stdout.isTTY)
-        mountedAppContext.stdout.write(ansiEscapes.exitAlternativeScreen);
+    if (mountedAppContext?.interactive) {
+      const restore = "\x1b[?25h" + (mountedFullscreen ? ansiEscapes.exitAlternativeScreen : "");
+      writeTerminalRestore(restore, sync);
     }
+    mountedFullscreen = false;
 
     if (mountedAsOwner && mountedStdout) {
       liveInstances.delete(mountedStdout);
@@ -227,6 +254,12 @@ export function createApp(root: Component<RootProps>, rootProps?: RootProps | nu
       teardownStarted = false;
 
       const interactive = options.interactive ?? (!isInCi && Boolean(stdout.isTTY));
+      const fullscreen =
+        Boolean(options.fullscreen ?? options.alternateScreen) &&
+        interactive &&
+        Boolean(stdout.isTTY);
+      const mouseFullscreen =
+        fullscreen && supportsTerminalMouse() && Boolean((stdin as { isTTY?: boolean }).isTTY);
       const isScreenReaderEnabled =
         options.isScreenReaderEnabled ?? process.env["INK_SCREEN_READER"] === "true";
       const maxFps = options.maxFps ?? 30;
@@ -393,8 +426,8 @@ export function createApp(root: Component<RootProps>, rootProps?: RootProps | nu
           },
         );
 
-      function renderFrame(width: number): string {
-        if (!isScreenReaderEnabled) return paint(tuiRoot);
+      function renderFrame(width: number, hitMap?: MouseHitMapEntry[]): string {
+        if (!isScreenReaderEnabled) return paint(tuiRoot, { hitMap });
         const linear = renderScreenReaderOutput(tuiRoot, { skipStaticElements: true });
         return wrapAnsi(linear, width, { trim: false, hard: true });
       }
@@ -419,7 +452,9 @@ export function createApp(root: Component<RootProps>, rootProps?: RootProps | nu
           }
           if (staticOutput) frameState.fullStaticOutput += staticOutput;
 
-          const frame = renderFrame(width);
+          const hitMap = mouseFullscreen ? [] : undefined;
+          const frame = renderFrame(width, hitMap);
+          mouseController.updateHitMap(hitMap ?? []);
           const outputHeight = frame === "" ? 0 : frame.split("\n").length;
           frameState.lastOutput = frame;
           frameState.outputHeight = outputHeight;
@@ -456,13 +491,20 @@ export function createApp(root: Component<RootProps>, rootProps?: RootProps | nu
         immediate: unthrottled,
         throttleMs: renderThrottleMs,
       });
+      const mouseController = createMouseController({
+        stdin: stdinController,
+        fullscreen: mouseFullscreen,
+        now: scheduler.now,
+      });
+      appContext.internal_mouse = mouseController;
       mountedScheduler = scheduler;
       mountedRestoreRendererCommit = setRendererCommit(scheduler.schedule);
 
-      if (options.alternateScreen && interactive && stdout.isTTY) {
-        stdout.write(ansiEscapes.enterAlternativeScreen);
+      if (fullscreen) {
+        stdout.write(ansiEscapes.enterAlternativeScreen + "\x1b[H");
         stdout.write("\x1b[?25l");
       }
+      mountedFullscreen = fullscreen;
 
       if (options.patchConsole !== false && !debug) {
         mountedRestoreConsole = patchConsoleFn((stream, data) => {
@@ -497,9 +539,9 @@ export function createApp(root: Component<RootProps>, rootProps?: RootProps | nu
         mountedResizeHandler = onResize;
       }
 
-      mountedExitListener = () => teardown();
+      mountedExitListener = () => teardown(true);
       process.on("exit", mountedExitListener);
-      if (interactive) mountedUnsubscribeExit = onExit(() => teardown(), { alwaysLast: false });
+      if (interactive) mountedUnsubscribeExit = onExit(() => teardown(true), { alwaysLast: false });
 
       return {};
     },
@@ -667,7 +709,7 @@ export function createFocusController(): FocusControllerForTest {
 }
 
 interface StdinController extends StdinContext {
-  dispose: () => void;
+  dispose: (sync?: boolean) => void;
   holdRawModeForLifetime: () => void;
 }
 
@@ -687,8 +729,81 @@ function createStdinController(
   const inputParser = createInputParser();
   let refs = 0;
   let bracketedPasteModeCount = 0;
+  const sgrMouseModeTokens = new Map<symbol, SgrMouseMode>();
+  let activeSgrMouseMode: SgrMouseMode | undefined;
+  let everEnabledBracketedPaste = false;
+  let everEnabledSgrMouse = false;
   let pendingFlushTimer: ReturnType<typeof setTimeout> | undefined;
   const FLUSH_DELAY = 20;
+  const DISABLE_SGR_MOUSE = "\x1b[?1003l\x1b[?1002l\x1b[?1000l\x1b[?1006l";
+
+  function canWriteTerminalMode(): boolean {
+    const stdout = appCtx.stdout as MaybeWritableStream;
+    return Boolean(stdout.isTTY) && !stdout.destroyed && !stdout.writableEnded;
+  }
+
+  function canUseSgrMouseMode(): boolean {
+    return canWriteTerminalMode() && supportsTerminalMouse();
+  }
+
+  function writeTerminalMode(data: string, sync = false) {
+    if (!canWriteTerminalMode()) return;
+    if (sync) {
+      try {
+        const streamFd = (appCtx.stdout as { fd?: number }).fd;
+        fsWriteSync(typeof streamFd === "number" ? streamFd : 1, data);
+      } catch {
+        // Best-effort restore during abrupt shutdown.
+      }
+      return;
+    }
+    appCtx.stdout.write(data);
+  }
+
+  function disableSgrMouse(sync = false) {
+    writeTerminalMode(DISABLE_SGR_MOUSE, sync);
+  }
+
+  function enableSgrMouse(level: SgrMouseMode) {
+    switch (level) {
+      case "button":
+        writeTerminalMode("\x1b[?1000h\x1b[?1006h");
+        everEnabledSgrMouse = true;
+        return;
+      case "drag":
+        writeTerminalMode("\x1b[?1002h\x1b[?1006h");
+        everEnabledSgrMouse = true;
+        return;
+      case "hover":
+        writeTerminalMode("\x1b[?1003h\x1b[?1006h");
+        everEnabledSgrMouse = true;
+    }
+  }
+
+  function sgrMouseModeRank(level: SgrMouseMode): number {
+    return level === "button" ? 1 : level === "drag" ? 2 : 3;
+  }
+
+  function highestRequestedSgrMouseMode(): SgrMouseMode | undefined {
+    let highest: SgrMouseMode | undefined;
+    for (const level of sgrMouseModeTokens.values()) {
+      if (!highest || sgrMouseModeRank(level) > sgrMouseModeRank(highest)) highest = level;
+    }
+    return highest;
+  }
+
+  function reconcileSgrMouseMode() {
+    const next = highestRequestedSgrMouseMode();
+    if (!canUseSgrMouseMode()) {
+      if (activeSgrMouseMode) disableSgrMouse();
+      activeSgrMouseMode = undefined;
+      return;
+    }
+    if (next === activeSgrMouseMode) return;
+    if (activeSgrMouseMode) disableSgrMouse();
+    if (next) enableSgrMouse(next);
+    activeSgrMouseMode = next;
+  }
 
   function clearPendingFlush() {
     if (pendingFlushTimer !== undefined) {
@@ -710,6 +825,15 @@ function createStdinController(
           return;
         }
       }
+    }
+    if (activeSgrMouseMode && isSgrMouseInput(input)) {
+      const rawMouse = parseSgrMouseInput(input);
+      if (rawMouse && emitter.listenerCount("internal_mouse") > 0) {
+        emitter.emit("internal_mouse", rawMouse);
+      }
+      const mouse = parseMouseInput(input);
+      if (mouse && emitter.listenerCount("mouse") > 0) emitter.emit("mouse", mouse);
+      return;
     }
     if (input === "\x1b" && focusContext.enabled) focusContext.blur();
     emitter.emit("input", input);
@@ -790,6 +914,7 @@ function createStdinController(
       if (enabled) {
         if (bracketedPasteModeCount === 0 && appCtx.stdout.isTTY) {
           appCtx.stdout.write("\x1b[?2004h");
+          everEnabledBracketedPaste = true;
         }
         bracketedPasteModeCount++;
       } else {
@@ -800,12 +925,27 @@ function createStdinController(
         }
       }
     },
-    dispose() {
+    acquireSgrMouseMode(level: SgrMouseMode = "button") {
+      const token = Symbol("sgr-mouse");
+      sgrMouseModeTokens.set(token, level);
+      reconcileSgrMouseMode();
+      return token;
+    },
+    releaseSgrMouseMode(token: symbol) {
+      if (!sgrMouseModeTokens.delete(token)) return;
+      reconcileSgrMouseMode();
+    },
+    dispose(sync = false) {
       clearPendingFlush();
       stdin.off("data", handleData);
       emitter.off("input", focusInputListener);
-      if (bracketedPasteModeCount > 0 && appCtx.stdout.isTTY) appCtx.stdout.write("\x1b[?2004l");
+      if (sync && everEnabledBracketedPaste) writeTerminalMode("\x1b[?2004l", true);
+      else if (bracketedPasteModeCount > 0) writeTerminalMode("\x1b[?2004l");
       bracketedPasteModeCount = 0;
+      if (sync && everEnabledSgrMouse) disableSgrMouse(true);
+      else if (activeSgrMouseMode || sgrMouseModeTokens.size > 0) disableSgrMouse();
+      activeSgrMouseMode = undefined;
+      sgrMouseModeTokens.clear();
       if (refs > 0 && appCtx.isRawModeSupported) {
         refs = 0;
         appCtx.setRawMode(false);

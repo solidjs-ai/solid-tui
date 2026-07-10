@@ -11,5 +11,5 @@
       "@solid-tui/vite": ["../../packages/vite/src/index.ts"]
     }
   },
-  "include": ["src/**/*.ts", "src/**/*.tsx", "vite.config.ts"]
+  "include": ["src/**/*.ts", "src/**/*.tsx", "vite.config.ts", "tsdown.config.ts"]
 }

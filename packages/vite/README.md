@@ -1,17 +1,19 @@
 # @solid-tui/vite
 
-Vite plugin for solid-tui: an in-process terminal dev server with HMR, plus a
-production build, for Solid apps that render to the terminal via
-`@solid-tui/runtime`.
+Development plugin for [solid-tui](https://github.com/solidjs-ai/solid-tui): universal Solid TSX,
+an in-process terminal dev server, and HMR.
 
 ## Install
 
 ```sh
-npm install -D @solid-tui/vite
-# peer deps: vite ^8, @solid-tui/runtime, solid-js ^1.9
+npm install -D @solid-tui/vite vite
 ```
 
-## Usage
+## Development
+
+`solidTui()` includes the Solid compiler because terminal JSX must use Solid's universal transform
+with `moduleName: "@solid-tui/runtime"`. It also forces the client Solid runtime so the application,
+stores, and custom renderer share one reactive owner graph.
 
 ```ts
 import { defineConfig } from "vite";
@@ -22,42 +24,60 @@ export default defineConfig({
 });
 ```
 
-- `vite` boots the app in-process through Vite's SSR module runner and renders it
-  to the terminal with HMR.
-- `vite build` bundles a Node entry (`dist/main.js` by default).
+```sh
+vite
+```
 
 ### Options
 
 ```ts
 solidTui({
-  entry: "src/main.tsx",
-  solid: {
-    // vite-plugin-solid options; generate/moduleName are forced for solid-tui.
-  },
+  entry: "src/main.tsx", // default
+  solid: {}, // additional vite-plugin-solid options
 });
 ```
 
-## Build output
+## Production Build
 
-By default the production build externalizes bare dependencies, while bundling
-relative, absolute, virtual, and Solid runtime ids required by the terminal
-renderer. To produce a self-contained single file, set your own
-`build.rolldownOptions.external`; the plugin will yield to it.
+`solidTui()` is dev-only. Build the Node application with `tsdown` and the Rolldown Solid plugin.
+The aliases and explicit `external` policy keep application signals, stores, and the renderer on
+one bundled Solid client runtime. Without the policy, the Solid Rolldown plugin externalizes its
+framework imports by default, which creates a second reactive owner graph at runtime.
 
 ```ts
-import { isBuiltin } from "node:module";
+import { createRequire } from "node:module";
+import { defineConfig } from "tsdown";
+import Solid from "unplugin-solid/rolldown";
+
+const require = createRequire(import.meta.url);
 
 export default defineConfig({
-  plugins: [solidTui()],
-  build: {
-    rolldownOptions: {
-      external: (id) => isBuiltin(id),
-      platform: "node",
-      output: { inlineDynamicImports: true },
+  entry: ["src/main.tsx"],
+  platform: "node",
+  format: "esm",
+  deps: { alwaysBundle: [/./], onlyBundle: false },
+  inputOptions: {
+    external: /^node:/,
+    resolve: {
+      alias: {
+        "solid-js/store": require.resolve("solid-js/store/dist/store.js"),
+        "solid-js": require.resolve("solid-js/dist/solid.js"),
+      },
     },
   },
+  outputOptions: { codeSplitting: false },
+  plugins: [
+    Solid({
+      dev: false,
+      hot: false,
+      solid: { generate: "universal", moduleName: "@solid-tui/runtime" },
+    }),
+  ],
 });
 ```
+
+This emits one self-contained Node file in `dist/`. See every app under `examples/` for a complete
+configuration.
 
 ## License
 

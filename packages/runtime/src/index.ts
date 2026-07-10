@@ -6,7 +6,6 @@ export {
   insert,
   insertNode,
   memo,
-  mergeProps,
   setProp,
   spread,
   use,
@@ -21,6 +20,7 @@ export {
   createRoot,
   createSignal,
   createContext,
+  mergeProps,
   on,
   onCleanup,
   splitProps,
@@ -62,6 +62,29 @@ export { Transform, type TransformProps } from "./components/transform.ts";
 
 export { useApp, type UseAppReturn } from "./hooks/useApp.ts";
 export { useInput, type Key, type UseInputOptions } from "./hooks/useInput.ts";
+export {
+  useMouseInput,
+  type MouseInputEvent,
+  type MouseInputHandler,
+  type UseMouseInputOptions,
+} from "./hooks/useMouseInput.ts";
+export {
+  useDraggable,
+  type UseDraggableAxis,
+  type UseDraggableOptions,
+  type UseDraggablePosition,
+  type UseDraggableReturn,
+  type UseDraggableTarget,
+} from "./hooks/useDraggable.ts";
+export type {
+  MouseButton,
+  MouseHandlerProps,
+  MouseTarget,
+  MouseTargetRect,
+  TuiMouseEvent,
+  TuiMouseEventType,
+  TuiWheelEvent,
+} from "./mouse/events.ts";
 export { usePaste, type UsePasteOptions } from "./hooks/usePaste.ts";
 export { useFocus, type UseFocusOptions } from "./hooks/useFocus.ts";
 export { useFocusManager } from "./hooks/useFocusManager.ts";

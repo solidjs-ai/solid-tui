@@ -1,5 +1,7 @@
 import cliBoxes from "cli-boxes";
 import type { JSX } from "../solid-client.ts";
+import type { Ref } from "solid-js";
+import type { MouseHandlerProps } from "../mouse/events.ts";
 
 type Spacing = number;
 type FlexDirection = "row" | "row-reverse" | "column" | "column-reverse";
@@ -65,9 +67,9 @@ export interface AriaState {
   selected?: boolean;
 }
 
-export interface BoxProps {
+export interface BoxProps extends MouseHandlerProps {
   children?: JSX.Element;
-  ref?: (node: unknown) => void;
+  ref?: Ref<unknown>;
   flexDirection?: FlexDirection;
   flexGrow?: number;
   flexShrink?: number;

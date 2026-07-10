@@ -11,6 +11,7 @@ export interface RenderOptions {
   props?: Record<string, unknown>;
   exitOnCtrlC?: boolean;
   interactive?: boolean;
+  fullscreen?: boolean;
 }
 
 export interface Terminal {
@@ -72,6 +73,7 @@ export async function render(
     debug: true,
     interactive: options.interactive ?? true,
     exitOnCtrlC: options.exitOnCtrlC ?? false,
+    fullscreen: options.fullscreen,
     [INTERNAL_FRAME_SINK]: frameSink,
   } as Parameters<TuiApp["mount"]>[0]);
 
